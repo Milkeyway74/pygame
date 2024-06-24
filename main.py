@@ -17,15 +17,15 @@ class Cat(pygame.sprite.Sprite):
     def update(self, keys, walls):
         old_rect = self.rect.copy()
         
-        if keys[pygame.K_LEFT]:
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.rect.x -= self.speed
             self.direction = "left"
-        if keys[pygame.K_RIGHT]:
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.rect.x += self.speed
             self.direction = "right"
-        if keys[pygame.K_UP]:
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
             self.rect.y -= self.speed
-        if keys[pygame.K_DOWN]:
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             self.rect.y += self.speed
 
         # Ограничение движения кота в пределах экрана
@@ -57,52 +57,28 @@ class Mouse(pygame.sprite.Sprite):
         self.direction = "right"
         self.frame = 0
 
-    def update(self, cat_x, cat_y, walls):
-        # Вычисляем расстояние по осям X и Y
-        dx = self.rect.x - cat_x
-        dy = self.rect.y - cat_y
-        speed = self.speed
+    def update(self, cat_rect, walls):
         old_rect = self.rect.copy()
 
+        if random.randint(0, 100) < 10:  # случайное движение с вероятностью 10% каждый кадр
+            self.direction = random.choice(["left", "right", "up", "down"])
+
+        if self.direction == "left":
+            self.rect.x -= self.speed
+        elif self.direction == "right":
+            self.rect.x += self.speed
+        elif self.direction == "up":
+            self.rect.y -= self.speed
+        elif self.direction == "down":
+            self.rect.y += self.speed
+
+        # Проверка коллизии с непроходимыми стенами
         for wall in walls:
             if wall.blocking and self.rect.colliderect(wall.rect):
                 self.rect = old_rect
                 break
 
-        #if (self.rect.x == 0 or self.rect.x == 800 - self.rect.width - 10) and (
-        #    self.rect.y == 0 or self.rect.y == 600 - self.rect.height - 10):
-        #    dx = - dx
-        #    dy = -dy
-
-        # Разворачиваем при попадании в угол
-        if self.rect.right + speed >= 800:
-            self.rect.x -= speed
-        if self.rect.left + speed <= 0:
-            self.rect.x += speed
-        if self.rect.bottom + speed >= 600:
-            self.rect.y -= speed
-        if self.rect.top + speed <= 0:
-            self.rect.y += speed
-
-        # Определяем направление движения
-        if abs(dx) > abs(dy):
-            if dx < 0:
-                self.rect.x -= speed
-            else:
-                self.rect.x += speed
-        else:
-            if dy < 0:
-                self.rect.y -= speed
-            else:
-                self.rect.y += speed
-        
         self.frame += 1
-        
-        # Ограничение движения по краям экрана
-        self.rect.x = max(0, self.rect.x)
-        self.rect.x = min(800 - self.rect.width, self.rect.x)
-        self.rect.y = max(0, self.rect.y)
-        self.rect.y = min(600 - self.rect.height, self.rect.y)
 
     def draw(self, screen):
         screen.blit(self.images[self.direction][self.frame % len(self.images[self.direction])], self.rect.topleft)
@@ -349,7 +325,7 @@ class Game:
             elif not self.game_paused and not self.game_over:
                 keys = pygame.key.get_pressed()
                 self.cat.update(keys, self.walls)
-                self.mouse.update(self.cat.rect.x, self.cat.rect.y, self.walls)
+                self.mouse.update(self.cat.rect, self.walls)
 
                 self.screen.fill((255, 255, 255))
 
