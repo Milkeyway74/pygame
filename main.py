@@ -207,7 +207,7 @@ class Game:
             self.walls.append(Wall((x, 0), self.wall_images["high"]))
             self.walls.append(Wall((x, self.screen_height - tile_size), self.wall_images["low"]))
 
-        # Углы стен
+        # Создаем углы стен
         self.walls.append(Wall((0, 0), self.wall_images["left_high_corner"]))
         self.walls.append(Wall((0, self.screen_height - tile_size), self.wall_images["left_low_corner"]))
         self.walls.append(Wall((self.screen_width - tile_size, 0), self.wall_images["right_high_corner"]))
@@ -288,14 +288,9 @@ class Game:
                         self.cat_images_left = self.inverted_cat_images_left
                         self.cat_color_selected = True
                         self.reset_game()
-                elif self.game_paused:
+                elif self.game_paused or self.game_over:
                     if self.button_restart.collidepoint(event.pos):
-                        self.reset_game()
-                    elif self.button_quit.collidepoint(event.pos):
-                        pygame.quit()
-                        quit()
-                elif self.game_over:
-                    if self.button_restart.collidepoint(event.pos):
+                        self.cat_color_selected = False
                         self.reset_game()
                     elif self.button_quit.collidepoint(event.pos):
                         pygame.quit()
