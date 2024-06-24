@@ -115,8 +115,11 @@ class Game:
         self.game_paused = False
         self.game_over = False
 
-        # Таймер
+        # Таймеры
         self.clock = pygame.time.Clock()
+        self.start_time = None
+        self.elapsed_time = 0
+        self.best_time = float('inf')  # Лучшее время, инициализированное как бесконечность
 
         # Создание кнопок
         self.create_buttons()
@@ -181,10 +184,10 @@ class Game:
     def create_buttons(self):
         # Кнопки выбора цвета кота
         self.button_original_color = pygame.Rect(self.screen_width // 2 - 150, self.screen_height // 2 - 25, 300, 50)
-        self.button_original_color_text = "Изначальный цвет кота"
+        self.button_original_color_text = "Добрый"
         
         self.button_inverted_color = pygame.Rect(self.screen_width // 2 - 150, self.screen_height // 2 + 35, 300, 50)
-        self.button_inverted_color_text = "Обратный цвет кота"
+        self.button_inverted_color_text = "Злой"
 
         # Кнопка "Начать заново"
         self.button_restart = pygame.Rect(self.screen_width // 2 - 100, self.screen_height // 2 + 10, 200, 50)
@@ -266,6 +269,14 @@ class Game:
         self.screen.blit(text_quit, (self.button_quit.x + (self.button_quit.width - text_quit.get_width()) // 2,
                                      self.button_quit.y + (self.button_quit.height - text_quit.get_height()) // 2))
 
+    def draw_timer(self):
+        font = pygame.font.Font(None, 28)
+        elapsed_time_text = font.render(f"Время: {self.elapsed_time:.2f} сек", True, (0, 0, 0))
+        best_time_text = font.render(f"Лучшее время: {self.best_time:.2f} сек", True, (0, 0, 0))
+
+        self.screen.blit(elapsed_time_text, (self.screen_width - elapsed_time_text.get_width() - 10, self.screen_height - elapsed_time_text.get_height() - 50))
+        self.screen.blit(best_time_text, (self.screen_width - best_time_text.get_width() - 10, self.screen_height - best_time_text.get_height() - 10))
+
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -301,6 +312,8 @@ class Game:
         self.mouse = Mouse((500, 500), self.mouse_images)
         self.game_paused = False
         self.game_over = False
+        self.start_time = pygame.time.get_ticks()
+        self.elapsed_time = 0
 
     def run_game(self):
         while True:
@@ -325,12 +338,21 @@ class Game:
                 # Проверка на столкновение кота и мыши
                 if self.cat.rect.colliderect(self.mouse.rect):
                     self.game_over = True
+                    self.elapsed_time = (pygame.time.get_ticks() - self.start_time) / 1000.0
+                    if self.elapsed_time < self.best_time:
+                        self.best_time = self.elapsed_time
+
+                # Обновляем время
+                self.elapsed_time = (pygame.time.get_ticks() - self.start_time) / 1000.0
 
             if self.game_paused:
                 self.draw_pause_menu()
 
             if self.game_over:
                 self.draw_game_over_menu()
+
+            # Отображаем таймер
+            self.draw_timer()
 
             pygame.display.flip()
             self.clock.tick(30)
