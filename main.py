@@ -149,7 +149,7 @@ class Game:
         self.screen_width = 800
         self.screen_height = 600
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
-        pygame.display.set_caption("Игра Кот и Мышь")
+        pygame.display.set_caption("Catch me if you can")
 
         # Загрузка изображений
         self.load_images()
