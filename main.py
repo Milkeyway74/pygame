@@ -105,11 +105,13 @@ class Game:
         # Загрузка изображений
         self.load_images()
 
-        # Создание игровых объектов
-        self.cat = Cat((100, 100), self.cat_images_right, self.cat_images_left)
-        self.mouse = Mouse((500, 500), self.mouse_images)
-
         # Игровые переменные
+        self.cat_color_selected = False
+        self.cat_images_right = []
+        self.cat_images_left = []
+        self.cat = None
+        self.mouse = None
+
         self.game_paused = False
         self.game_over = False
 
@@ -122,15 +124,20 @@ class Game:
         # Создание стен и пола
         self.create_walls_and_floor()
 
-
     def load_images(self):
         current_directory = os.path.dirname(os.path.abspath(__file__))
         animals_folder = os.path.join(current_directory, 'animals')
 
+        # Загрузка изображений кота
         cat_folder = os.path.join(animals_folder, 'cats_1')
-        self.cat_images_right = self.load_images_from_folder(cat_folder, '0')
-        self.cat_images_left = [pygame.transform.flip(img, True, False) for img in self.cat_images_right]
+        self.original_cat_images_right = self.load_images_from_folder(cat_folder, '0')
+        self.original_cat_images_left = [pygame.transform.flip(img, True, False) for img in self.original_cat_images_right]
 
+        # Создание негативных изображений кота
+        self.inverted_cat_images_right = [self.invert_colors(img) for img in self.original_cat_images_right]
+        self.inverted_cat_images_left = [self.invert_colors(img) for img in self.original_cat_images_left]
+
+        # Загрузка изображений мыши
         mouse_folder = os.path.join(animals_folder, 'mouse')
         self.mouse_images = {
             "right": self.load_images_from_folder(mouse_folder, '0'),
@@ -163,7 +170,22 @@ class Game:
                   for img_file in image_files]
         return images
 
+    def invert_colors(self, image):
+        inverted_image = pygame.Surface(image.get_size(), pygame.SRCALPHA)
+        for x in range(image.get_width()):
+            for y in range(image.get_height()):
+                r, g, b, a = image.get_at((x, y))
+                inverted_image.set_at((x, y), (255 - r, 255 - g, 255 - b, a))
+        return inverted_image
+
     def create_buttons(self):
+        # Кнопки выбора цвета кота
+        self.button_original_color = pygame.Rect(self.screen_width // 2 - 150, self.screen_height // 2 - 25, 300, 50)
+        self.button_original_color_text = "Изначальный цвет кота"
+        
+        self.button_inverted_color = pygame.Rect(self.screen_width // 2 - 150, self.screen_height // 2 + 35, 300, 50)
+        self.button_inverted_color_text = "Обратный цвет кота"
+
         # Кнопка "Начать заново"
         self.button_restart = pygame.Rect(self.screen_width // 2 - 100, self.screen_height // 2 + 10, 200, 50)
         self.button_restart_text = "Начать заново"
@@ -195,6 +217,22 @@ class Game:
         for x in range(tile_size, self.screen_width - tile_size, tile_size):
             for y in range(tile_size, self.screen_height - tile_size, tile_size):
                 self.walls.append(Wall((x, y), self.wall_images["middle"], blocking=False))
+
+    def draw_start_menu(self):
+        font = pygame.font.Font(None, 36)
+        text = font.render("Выберите цвет кота", True, (0, 0, 0))
+        self.screen.blit(text, (self.screen_width // 2 - text.get_width() // 2, self.screen_height // 2 - 100))
+
+        pygame.draw.rect(self.screen, (0, 0, 0), self.button_original_color)
+        pygame.draw.rect(self.screen, (0, 0, 0), self.button_inverted_color)
+
+        text_original_color = font.render(self.button_original_color_text, True, (255, 255, 255))
+        text_inverted_color = font.render(self.button_inverted_color_text, True, (255, 255, 255))
+
+        self.screen.blit(text_original_color, (self.button_original_color.x + (self.button_original_color.width - text_original_color.get_width()) // 2,
+                                              self.button_original_color.y + (self.button_original_color.height - text_original_color.get_height()) // 2))
+        self.screen.blit(text_inverted_color, (self.button_inverted_color.x + (self.button_inverted_color.width - text_inverted_color.get_width()) // 2,
+                                              self.button_inverted_color.y + (self.button_inverted_color.height - text_inverted_color.get_height()) // 2))
 
     def draw_pause_menu(self):
         font = pygame.font.Font(None, 36)
@@ -239,7 +277,18 @@ class Game:
                 elif event.key == pygame.K_r and self.game_over:
                     self.reset_game()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if self.game_paused:
+                if not self.cat_color_selected:
+                    if self.button_original_color.collidepoint(event.pos):
+                        self.cat_images_right = self.original_cat_images_right
+                        self.cat_images_left = self.original_cat_images_left
+                        self.cat_color_selected = True
+                        self.reset_game()
+                    elif self.button_inverted_color.collidepoint(event.pos):
+                        self.cat_images_right = self.inverted_cat_images_right
+                        self.cat_images_left = self.inverted_cat_images_left
+                        self.cat_color_selected = True
+                        self.reset_game()
+                elif self.game_paused:
                     if self.button_restart.collidepoint(event.pos):
                         self.reset_game()
                     elif self.button_quit.collidepoint(event.pos):
@@ -262,7 +311,10 @@ class Game:
         while True:
             self.handle_events()
 
-            if not self.game_paused and not self.game_over:
+            if not self.cat_color_selected:
+                self.screen.fill((255, 255, 255))
+                self.draw_start_menu()
+            elif not self.game_paused and not self.game_over:
                 keys = pygame.key.get_pressed()
                 self.cat.update(keys, self.walls)
                 self.mouse.update(self.cat.rect, self.walls)
