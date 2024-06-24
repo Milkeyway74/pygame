@@ -96,6 +96,9 @@ class Game:
         # Таймер
         self.clock = pygame.time.Clock()
 
+        # Создание кнопок
+        self.create_buttons()
+
     def load_images(self):
         current_directory = os.path.dirname(os.path.abspath(__file__))
         animals_folder = os.path.join(current_directory, 'animals')
@@ -123,35 +126,63 @@ class Game:
                   for img_file in image_files]
         return images
 
-    def draw_pause_menu(self):
-        # Заливка полупрозрачным фоном
-        overlay = pygame.Surface((self.screen_width, self.screen_height))
-        overlay.set_alpha(128)  # Прозрачность 50%
-        overlay.fill((0, 0, 0))
-        self.screen.blit(overlay, (0, 0))
+    def create_buttons(self):
+        # Кнопка "Начать заново"
+        self.button_restart = pygame.Rect(self.screen_width // 2 - 100, self.screen_height // 2 + 10, 200, 50)
+        self.button_restart_text = "Начать заново"
 
+        # Кнопка "Выйти"
+        self.button_quit = pygame.Rect(self.screen_width // 2 - 100, self.screen_height // 2 + 70, 200, 50)
+        self.button_quit_text = "Выйти"
+
+    def draw_pause_menu(self):
         # Отрисовка текста меню паузы
         font = pygame.font.Font(None, 36)
         text_paused = font.render("Пауза", True, (255, 255, 255))
         text_rect_paused = text_paused.get_rect(center=(self.screen_width // 2, self.screen_height // 2 - 50))
         self.screen.blit(text_paused, text_rect_paused)
 
+        # Отрисовка кнопок
+        pygame.draw.rect(self.screen, (0, 128, 255), self.button_restart)
+        pygame.draw.rect(self.screen, (0, 128, 255), self.button_quit)
+
+        font = pygame.font.Font(None, 28)
+        text_restart = font.render(self.button_restart_text, True, (255, 255, 255))
+        text_quit = font.render(self.button_quit_text, True, (255, 255, 255))
+
+        self.screen.blit(text_restart, (self.button_restart.centerx - text_restart.get_width() // 2, self.button_restart.centery - text_restart.get_height() // 2))
+        self.screen.blit(text_quit, (self.button_quit.centerx - text_quit.get_width() // 2, self.button_quit.centery - text_quit.get_height() // 2))
+
         pygame.display.flip()
 
     def draw_game_over(self):
         # Заливка полупрозрачным фоном
-        overlay = pygame.Surface((self.screen_width, self.screen_height))
-        overlay.set_alpha(128)  # Прозрачность 50%
-        overlay.fill((0, 0, 0))
-        self.screen.blit(overlay, (0, 0))
+        self.screen.fill((255, 255, 255))  # Очищаем экран перед отрисовкой
 
         # Отрисовка текста экрана поражения
         font = pygame.font.Font(None, 36)
-        text_game_over = font.render("Игра окончена", True, (255, 255, 255))
+        text_game_over = font.render("Игра окончена", True, (255, 0, 0))  # Красный цвет для текста
         text_rect_game_over = text_game_over.get_rect(center=(self.screen_width // 2, self.screen_height // 2 - 50))
         self.screen.blit(text_game_over, text_rect_game_over)
 
+        # Отрисовка кнопок
+        pygame.draw.rect(self.screen, (0, 128, 255), self.button_restart)
+        pygame.draw.rect(self.screen, (0, 128, 255), self.button_quit)
+
+        font = pygame.font.Font(None, 28)
+        text_restart = font.render(self.button_restart_text, True, (255, 255, 255))
+        text_quit = font.render(self.button_quit_text, True, (255, 255, 255))
+
+        self.screen.blit(text_restart, (self.button_restart.centerx - text_restart.get_width() // 2, self.button_restart.centery - text_restart.get_height() // 2))
+        self.screen.blit(text_quit, (self.button_quit.centerx - text_quit.get_width() // 2, self.button_quit.centery - text_quit.get_height() // 2))
+
         pygame.display.flip()
+
+    def restart_game(self):
+        self.game_over = False
+        self.game_paused = False
+        self.cat.rect.topleft = (100, 100)
+        self.mouse.rect.topleft = (500, 500)
 
     def run(self):
         running = True
@@ -166,16 +197,26 @@ class Game:
                             if self.game_paused:
                                 self.draw_pause_menu()
                         else:
-                            self.game_over = False
-                            self.cat.rect.topleft = (100, 100)
-                            self.mouse.rect.topleft = (500, 500)
+                            self.restart_game()
 
                     elif event.key == pygame.K_r and self.game_over:
-                        self.game_over = False
-                        self.cat.rect.topleft = (100, 100)
-                        self.mouse.rect.topleft = (500, 500)
+                        self.restart_game()
 
-            if not self.game_paused:
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if self.game_over:
+                        mouse_pos = pygame.mouse.get_pos()
+                        if self.button_restart.collidepoint(mouse_pos):
+                            self.restart_game()
+                        elif self.button_quit.collidepoint(mouse_pos):
+                            running = False
+                    elif self.game_paused:
+                        mouse_pos = pygame.mouse.get_pos()
+                        if self.button_restart.collidepoint(mouse_pos):
+                            self.restart_game()
+                        elif self.button_quit.collidepoint(mouse_pos):
+                            running = False
+
+            if not self.game_paused and not self.game_over:
                 keys = pygame.key.get_pressed()
                 self.cat.update(keys)
 
@@ -195,18 +236,8 @@ class Game:
 
             if self.game_over:
                 self.draw_game_over()
-
-                while self.game_over:
-                    for event in pygame.event.get():
-                        if event.type == pygame.KEYDOWN:
-                            if event.key == pygame.K_RETURN:
-                                self.game_over = False
-                                self.cat.rect.topleft = (100, 100)
-                                self.mouse.rect.topleft = (500, 500)
-                        elif event.type == pygame.MOUSEBUTTONDOWN:
-                            self.game_over = False
-                            self.cat.rect.topleft = (100, 100)
-                            self.mouse.rect.topleft = (500, 500)
+            elif self.game_paused:
+                self.draw_pause_menu()
 
         pygame.quit()
 
